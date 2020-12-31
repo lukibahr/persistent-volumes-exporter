@@ -1,0 +1,82 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-list
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - persistentvolumes
+  - namespaces
+  verbs: ["list", "watch"]
+- apiGroups: ["storage.k8s.io"]
+  resources:
+  - storageclasses
+  verbs: ["list", "watch"]  
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-list
+subjects:
+- kind: ServiceAccount
+  name: volume-exporter
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: pods-list
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: volume-exporter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: volume-exporter
+spec:
+  selector:
+    matchLabels:
+      app: volume-exporter
+  template:
+    metadata:
+      labels:
+        app: volume-exporter
+    spec:
+      serviceAccountName: volume-exporter
+      containers:
+      - name: volume-exporter
+        image: docker.io/lukasbahr/volume-exporter:v0.0.2
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 9123
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: volume-exporter
+spec:
+  selector:
+    app: volume-exporter
+  ports:
+  - port: 9123
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: volume-exporter
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        backend:
+          serviceName: volume-exporter
+          servicePort: 9123

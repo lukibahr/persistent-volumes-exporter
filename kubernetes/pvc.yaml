@@ -1,0 +1,28 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: samplepvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  #storageClassName: your-sc
+  resources:
+    requests:
+      storage: 10Gi   
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvpod
+spec:
+  containers:
+  - name: test-container
+    image: gcr.io/google_containers/test-webserver
+    volumeMounts:
+    - name: test-volume
+      mountPath: /test
+  volumes:
+  - name: test-volume
+    persistentVolumeClaim:
+      claimName: samplepvc
